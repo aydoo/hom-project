@@ -1,0 +1,196 @@
+# def preprocess(l):  # parsing madness because instance encoding is inconsistent (some lines end with space, some don't)
+#     if len(l) == 0:
+#         return []
+#     x = l.split(' ') if l[-1] != ' ' else l[:-1].split(' ')
+#     return list(map(int, x))
+#
+#
+# def read_file(path):
+#     with open(path) as f:
+#         return list(map(preprocess, f.read().splitlines()))
+#
+#
+# def parse_content(content):
+#     num_vehicles = content[0][0]
+#     num_lanes = content[1][0]
+#
+#     v_lengths = content[3]
+#     series = content[5]
+#
+#     end = 7 + num_vehicles
+#     equipment = [content[i] for i in range(7, end)]
+#
+#     l_lengths = content[end + 1]
+#
+#     departures = content[end + 3]
+#     schedule_types = content[end + 5]
+#
+#     blocked = {i[0]: i[1:] for i in content[end + 7:]}
+#
+#     return num_vehicles, num_lanes, v_lengths, series, equipment, l_lengths, departures, schedule_types, blocked
+#
+#
+# def parse(path):
+#     return parse_content(read_file(path))
+import numpy as np
+from pulp import *
+# from parser import parse
+import time
+
+vehicleLenghtsList = [42, 42, 42, 53, 53, 42, 53, 53, 53, 42, 53,
+               53, 53, 42, 53, 53, 53, 42, 53, 42, 42, 53,
+               53, 42, 42, 53, 42, 42, 42, 53, 42, 42, 53,
+               42, 42, 42, 42, 42, 53, 42, 42, 42, 42, 42,
+               42, 53, 42, 53, 42]
+
+vehicleSeriesList = [2, 2, 2, 1, 1, 2, 1, 1, 1, 2, 1, 1, 1,
+            2, 1, 1, 1, 2, 1, 2, 2, 1, 1, 2, 2, 1,
+            2, 2, 2, 1, 2, 2, 1, 2, 2, 2, 2, 2, 1,
+            2, 2, 2, 2, 2, 2, 1, 2, 1, 2]
+
+vehicleDepartureTimeList = [288, 333, 345, 360, 376, 393, 396, 399, 406, 410, 425, 438, 381, 419, 397, 255,
+                    257, 262, 307, 314, 324, 334, 344, 391, 400, 409, 428, 433, 442, 278, 283, 293,
+                    298, 303, 308, 313, 318, 323, 341, 385, 394, 440, 351, 312, 322, 332, 342, 407, 437]
+
+laneBlockingList = [[], [], [], [], [4], [], [], [7], [], [],
+                  [10], [13, 14], [], [], [], [15], [], [], [18],
+                  [], [22], [], [22], [], [24], [], [], [], []]
+
+laneLengthList = [74, 83, 90, 97, 96, 133, 132, 132, 134, 134,
+                  134, 128, 85, 88, 124, 120, 124, 107, 107, 107,
+                  107, 91, 88, 85, 78, 88, 70, 66, 80]
+
+vehicleLanePlacementList = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            ]
+
+ScheduleType = [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 1, 1, 4, 6,
+                6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4, 0, 0, 0, 0, 0, 0]
+
+#############read the file ########################
+
+def transform_to_int(elem):
+    if elem == '\n': #converting string elements to int
+        return 0
+    else:
+        return int(elem)
+
+def read_into_solution_list(paramList):
+
+    for i in range(29):
+        inp = f.readline()
+        x = inp.split(' ') if inp[-1] != ' ' else inp[:-1].split(' ')
+
+        newx = [] #creating empty lists in order to fill them with converted to int values from each row (lane)
+        for j in x:
+            tr = transform_to_int(j)
+            if tr != 0:
+                newx.append(tr)
+
+        paramList.append(newx) #appending the lane inputs to the array of lanes
+
+    return paramList
+
+
+####################check the constraints##################
+
+#2. same series in one lane
+def sameSeriesConstraint (li):
+    sat = True
+    if len(li) > 1:
+        for i in range(len(li)-1):
+            if i < len(li)-1:
+                if vehicleSeriesList[li[i]-1] != vehicleSeriesList[li[i+1]-1]:
+                    sat = False
+
+    return sat
+
+#3. length doesn't exceed
+def lengthConstraint (li, indexLi):
+    sat = True
+    lengthLi = []
+    if len(li)!=0:
+        for i in li:
+            lengthLi.append(vehicleLenghtsList[i-1])
+    if (sum(lengthLi)+0.5*(len(li)-1)) > laneLengthList[indexLi-1]:
+        sat = False
+    return sat
+
+#4. sort by departure time
+def departureTimeConstraint(li):
+    depLi = []
+    if len(li)>1:
+        for i in li:
+            depLi.append(vehicleDepartureTimeList[i-1])
+    sortedByDepartureTime = sorted(zip(li, depLi), key=lambda tup: tup[1])
+    li = [i[0] for i in sortedByDepartureTime]
+    return li
+
+#5. blocking lane departures
+def isBlockingConstraint(li, indexLi):
+    blockedLanesList = []
+    if len(laneBlockingList[indexLi]) != 0:
+
+        if len(laneBlockingList[indexLi]) == 1:
+            blockedLanesList.append(laneBlockingList[indexLi][0])
+        else:
+            for i in laneBlockingList[indexLi]:
+                blockedLanesList.append(i)
+    return blockedLanesList
+
+
+
+###############################################################
+InitSol = []
+f = open("instances/instance1.txt_solution_num_p_3.txt", "r")
+read_into_solution_list(InitSol)
+
+
