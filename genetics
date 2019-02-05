@@ -32,6 +32,7 @@
 #
 # def parse(path):
 #     return parse_content(read_file(path))
+
 import numpy as np
 from pulp import *
 # from parser import parse
@@ -175,7 +176,7 @@ def departureTimeConstraint(li):
     return li
 
 #5. blocking lane departures
-def isBlockingConstraint(li, indexLi):
+def BlockingLanesConstraint(li, indexLi):
     blockedLanesList = []
     if len(laneBlockingList[indexLi]) != 0:
 
@@ -184,13 +185,47 @@ def isBlockingConstraint(li, indexLi):
         else:
             for i in laneBlockingList[indexLi]:
                 blockedLanesList.append(i)
+
     return blockedLanesList
 
+def isAheadOfBlockedLane(li1, li2):
+    sat = True
+    if len(li1)!=0:
+        if len(li2)!=0:
+            if vehicleDepartureTimeList[li1[-1]-1] < vehicleDepartureTimeList[li2[0]-1]:
+                sat = True
+            else:
+                sat = False
 
+    return sat
 
 ###############################################################
 InitSol = []
 f = open("instances/instance1.txt_solution_num_p_3.txt", "r")
 read_into_solution_list(InitSol)
+
+
+##########################33CHECKING THE BLOCKING LANES CONSTRAINT########################3333
+
+i = 11
+#finding the lanes that it's blocking on example of some lane with index i
+blockedLanes = BlockingLanesConstraint(InitSol[i], i)
+print(blockedLanes)
+
+    #if there are some, we send each of them to find out whether
+    # the time of the blocking lane is smaller than of the one that is blocked
+
+blcs = True  # blcs = blocking lanes constraint satisfaction
+if len(blockedLanes) != 0:
+    for jindex in blockedLanes:
+        blcs = (blcs == isAheadOfBlockedLane(InitSol[i], InitSol[jindex-1]))
+print(blcs)
+
+
+
+
+
+
+
 
 
