@@ -2,12 +2,8 @@ import math
 from random import *
 from parser import parse
 
-file_path = 'instances/instance3.txt'
-
-num_vehicles, num_lanes, vehicle_lengths, series, equipment, lane_lengths, departures, schedule_types, blocked = parse(file_path)
-
 #############read the file ########################
-def read_into_solution_list(paramList):
+def read_into_solution_list(path):
     with open(path) as f:
         return [list(map(int, line.split(' ')[:-1])) for line in f.read().splitlines()]
 
@@ -44,9 +40,8 @@ def sameSeriesConstraint (CombLi):
         iSat = True
         if len(li) > 1:
             for i in range(len(li)-1):
-                if i < len(li)-1:
-                    if series[li[i]-1] != series[li[i+1]-1]:
-                        iSat = False
+                if series[li[i]-1] != series[li[i+1]-1]:
+                    iSat = False
         liSat = liSat == iSat
     return sat == liSat
 
@@ -82,15 +77,16 @@ def departureTimeConstraint(CombLi):
 
 #5. blocking lane departures
 def blockLanesRightChecker(CombLi): #main blocked lanes checker
-    sat = True
-    for i in blocked:
-        iSat = True
-        blockedLanes = blocked[i]
-        blcs = True  # blcs = blocking lanes constraint satisfaction
-        for jindex in blockedLanes:
-            blcs = (blcs == isAheadOfBlockedLane(CombLi[i], CombLi[jindex - 1]))
-        iSat= iSat == blcs
-    return sat == iSat
+    for blocking_lane in blocked:
+        blocked_lanes = blocked[blocking_lane]
+        for blocked_lane in blocked_lanes:
+            lane_i = CombLi[blocking_lane-1]
+            lane_j = CombLi[blocked_lane-1]
+            for i in lane_i:
+                for j in lane_j:
+                    if departures[i-1] >= departures[j-1]:
+                        return False
+    return True
 
 def isAheadOfBlockedLane(li1, li2): #help function
     sat = True
@@ -163,10 +159,11 @@ def insertRandomVehicle(combLi):  # moveV = number of vehicle to be moved, moveT
     #         indexOfLane = combLi.index(li)
     #     except ValueError:
     #         continue
+
     moveVehicle = randint(1, 10)  # a random vehicle that is gonna be taken out of a lane and put on another lane
     moveToLane = randint(0, len(combLi)-1)  # a random lane where we will put our vehicle
-    print("moving a random vehicle No" + str(moveVehicle))
-    print("moving to a random lane No" + str(moveToLane+1))
+#    print("moving a random vehicle No" + str(moveVehicle))
+#    print("moving to a random lane No" + str(moveToLane+1))
     for li in combLi:
         if moveVehicle in li:
             indexOfLane = combLi.index(li)
@@ -174,7 +171,7 @@ def insertRandomVehicle(combLi):  # moveV = number of vehicle to be moved, moveT
 
     while len(combLi[moveToLane]) == 3:
         moveToLane = randint(0, len(combLi)-1)
-        print("new random lane = " + str(moveToLane))
+       # print("new random lane = " + str(moveToLane))
 
     combLi[moveToLane].append(moveVehicle)
 
@@ -186,9 +183,10 @@ def insertRandomVehicle(combLi):  # moveV = number of vehicle to be moved, moveT
 
 def simulatedAnnealing(inputList):
 
-    currentSollution = inputList
+    cur_sol = inputList
     print("Initial set:\n All constraints are satisfied: " + str(allKillConstraintCheck(inputList)))
-    oldFitness = obj_1(currentSollution)
+    original_fitness = obj_1(cur_sol)
+    oldFitness = original_fitness
     print("The fitness function = " + str(oldFitness))
 
     T = 50 #T = temperature
@@ -198,11 +196,11 @@ def simulatedAnnealing(inputList):
     attemptsList = []  # it is a list of attempts to generate new set of lanes for each simulated annealing cycle
     while (T >= 5):
         combinationTry = 1
-        oldFitness = obj_1(currentSollution)
-        newSolution = insertRandomVehicle(currentSollution)
+        oldFitness = obj_1(cur_sol)
+        newSolution = insertRandomVehicle(cur_sol)
         #loop with creating a new random solution that satisfies the constraints
         while (allKillConstraintCheck(newSolution) != True):
-            newSolution = insertRandomVehicle(currentSollution) #generating the new set of lanes with vehicles
+            newSolution = insertRandomVehicle(cur_sol) #generating the new set of lanes with vehicles
             combinationTry += 1 #i just want to know how much tries it takes to generate a new list
 
         attemptsList.append(combinationTry)
@@ -211,22 +209,39 @@ def simulatedAnnealing(inputList):
 
         delta = newFitness - oldFitness
         if delta < 0:
-            currentSollution = newSolution
+            cur_sol = newSolution
+            print(f"Taking improving solution with fitness: {newFitness}")
         else:
             selectProbability = 1/(1 + math.e ** (delta/T)) #calculating the probability of changing the solution
             z = random()
             if z < selectProbability:
-                currentSollution = newSolution
+                print(f"Taking non-improving solution with fitness: {newFitness}")
+                cur_sol = newSolution
 
         T = T * (1 - coolrate) #changing the temperature
 
-    print("The solution was changed " + str(len(attemptsList)))
-    return currentSollution
+    print("Final solution fitness: " + str(obj_1(cur_sol)) + f" (original: {original_fitness})")
+    return cur_sol
 #**************************************************************************
 #***************************MAIN BODY**************************************
 #**************************************************************************
 
-path = "instances/instance1.txt_solution_num_p_3.txt"
-init_sol = read_into_solution_list(path)
-#**********************HEURISTICS************************
-print(simulatedAnnealing(init_sol))
+file_path = 'instances/instance3.txt'
+
+num_vehicles, num_lanes, vehicle_lengths, series, equipment, lane_lengths, departures, schedule_types, blocked = parse(file_path)
+
+sol_path = 'instances/instance3.txt_solution_num_p_3.txt'
+
+init_sol = read_into_solution_list(sol_path)
+improved_sol = simulatedAnnealing(init_sol)
+
+#Write to file
+improved_sol_path = sol_path + "_improved.txt"
+with open(improved_sol_path, 'w') as f:
+    for lane in improved_sol:
+        if len(lane) > 0:
+            for v in lane:
+                f.write(str(v) + " ")
+        f.write('\n')
+print('Saved solution matrix.')
+
