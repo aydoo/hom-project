@@ -107,12 +107,26 @@ def read_into_solution_list(paramList):
 ####################check the constraints##################
 def allKillConstraintCheck(InitialList):
     InitialList = departureTimeConstraint(InitialList)
-    allKillSat = True
-    allKillSat = allKillSat == sameSeriesConstraint(InitialList)
-    allKillSat = allKillSat == lengthConstraint(InitialList)
-    allKillSat = allKillSat == blockLanesRightChecker(InitialList)
+    allKillSat = []
+    allKillSat.append(int(True == sameSeriesConstraint(InitialList)))
+    allKillSat.append(int(True == lengthConstraint(InitialList)))
+    allKillSat.append(int(True == blockLanesRightChecker(InitialList)))
+    allKillSat.append(int(True == canBePlacedOnTheLane(InitialList)))
+    return sum(allKillSat) == 4
 
-    return allKillSat
+#1. if the vehicle can be placed on the lane
+def canBePlacedOnTheLane(combLi):
+    liSat = 1
+    for li in range(len(combLi)):
+        iSat = 1
+        if len(combLi[li]) != 0:
+            for i in combLi[li]:
+                iSat * int(1 == vehicleLanePlacementList[i-1][li])
+
+        liSat *= iSat
+    return liSat == 1
+
+
 
 #2. same series in one lane
 def sameSeriesConstraint (CombLi):
@@ -127,7 +141,6 @@ def sameSeriesConstraint (CombLi):
                         iSat = False
         liSat = liSat == iSat
     return sat == liSat
-
 
 #3. length doesn't exceed
 def lengthConstraint (CombLi):
@@ -264,13 +277,13 @@ attempt = 1
 newSol = InitSol
 
 while successfulRecombination != True:
+    print("Attempt " + str(attempt))
     lane1 = randint(0, 28)
     lane2 = randint(0, 28)
     print(str(lane1) + " " + str(lane2))
     newSol[lane1], newSol[lane2] = newSol[lane2], newSol[lane1]
     successfulRecombination = allKillConstraintCheck(newSol)
     attempt += 1
-    print("Attempt " + str(attempt))
 
 print(newSol)
 out = open("instances/newrandalg.txt", "a")
@@ -278,3 +291,4 @@ out.write("\n***********Array***************\n")
 out.write(str(newSol))
 out.write(str(calculate_fitness(newSol)))
 print(calculate_fitness(newSol))
+
