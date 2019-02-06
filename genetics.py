@@ -174,7 +174,7 @@ def fitness_function3(CombLi):
     return remainCapacity/(sum(l_lengths) - sum(v_lengths))
 
 
-def calculate_fitness(CombLi):
+def obj_1(CombLi):
     return fitness_function1(CombLi)+fitness_function2(CombLi)+fitness_function3(CombLi)
 
 
@@ -210,7 +210,7 @@ def simulatedAnnealing(inputList):
 
     currentSollution = inputList
     print("Initial set:\n All constraints are satisfied: " + str(allKillConstraintCheck(inputList)))
-    oldFitness = calculate_fitness(currentSollution)
+    oldFitness = obj_1(currentSollution)
     print("The fitness function = " + str(oldFitness))
 
     T = 50 #T = temperature
@@ -220,7 +220,7 @@ def simulatedAnnealing(inputList):
     attemptsList = []  # it is a list of attempts to generate new set of lanes for each simulated annealing cycle
     while (T >= 5):
         combinationTry = 1
-        oldFitness = calculate_fitness(currentSollution)
+        oldFitness = obj_1(currentSollution)
         newSolution = insertRandomVehicle(currentSollution)
         #loop with creating a new random solution that satisfies the constraints
         while (allKillConstraintCheck(newSolution) != True):
@@ -229,7 +229,7 @@ def simulatedAnnealing(inputList):
 
         attemptsList.append(combinationTry)
 
-        newFitness = calculate_fitness(newSolution)
+        newFitness = obj_1(newSolution)
 
         delta = newFitness - oldFitness
         if delta < 0:

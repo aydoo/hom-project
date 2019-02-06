@@ -109,7 +109,7 @@ for l in range(num_l):
 prob += p_1 * f_1 + p_2 * f_2 + p_3 * f_3
 #prob += p_1 * f_1 + p_2 * f_2 
 
-prob.writeLP("Scheduling2.lp")
+#prob.writeLP("Scheduling2.lp")
 start_time = time.time()
 print('Solving...')
 LpSolverDefault.msg = 1
