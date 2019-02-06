@@ -182,12 +182,12 @@ def simulatedAnnealing(sol):
     oldFitness = original_fitness
     print("The fitness function = " + str(oldFitness))
 
-    T = 50 #T = temperature
+    T = 100 #T = temperature
     coolrate = 0.08 #cooling rate
 
     #main loop with temperature decreasing
     attemptsList = []  # it is a list of attempts to generate new set of lanes for each simulated annealing cycle
-    while (T >= 5):
+    while (T > 0.01):
         combinationTry = 1
         oldFitness = obj_1(cur_sol)
         newSolution = insertRandomVehicle(cur_sol)
