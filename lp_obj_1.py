@@ -120,6 +120,7 @@ print("Status:", LpStatus[prob.status])
 print(f"Elapsed time: {round(time.time()-start_time, 2)}")
 print("Minimized value =", value(prob.objective))
 
+
 # Construct solution matrix
 result_matrix = np.full((num_l, num_p), None)
 for l in range(num_l):
