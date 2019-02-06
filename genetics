@@ -304,11 +304,10 @@ def simulatedAnnealing(inputList):
     coolrate = 0.08 #cooling rate
 
     #main loop with temperature decreasing
+    attemptsList = []  # it is a list of attempts to generate new set of lanes for each simulated annealing cycle
     while (T >= 5):
-
-        attemptsList = [] #it is a list of attempts to generate new set of lanes for each simulated annealing cycle
         combinationTry = 1
-
+        oldFitness = calculate_fitness(currentSollution)
         newSolution = insertRandomVehicle(currentSollution)
         #loop with creating a new random solution that satisfies the constraints
         while (allKillConstraintCheck(newSolution) != True):
@@ -339,28 +338,5 @@ def simulatedAnnealing(inputList):
 InitSol = []
 f = open("instances/instance1.txt_solution_num_p_3.txt", "r")
 read_into_solution_list(InitSol)
+#**********************HEURISTICS************************
 print(simulatedAnnealing(InitSol))
-
-#***************APPLYING HEURISTICS***************************
-
-######### Old algorithm ##################3
-
-# successfulRecombination = False
-# attempt = 1
-# newSol = InitSol
-#
-# while successfulRecombination != True:
-#     print("Attempt " + str(attempt))
-#     lane1 = randint(0, 28)
-#     lane2 = randint(0, 28)
-#     print(str(lane1) + " " + str(lane2))
-#     newSol[lane1], newSol[lane2] = newSol[lane2], newSol[lane1]
-#     successfulRecombination = allKillConstraintCheck(newSol)
-#     attempt += 1
-#
-# print(newSol)
-# out = open("instances/newrandalg.txt", "a")
-# out.write("\n***********Array***************\n")
-# out.write(str(newSol))
-# out.write(str(calculate_fitness(newSol)))
-# print(calculate_fitness(newSol))
