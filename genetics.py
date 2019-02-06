@@ -4,33 +4,12 @@ from parser import parse
 
 file_path = 'instances/instance3.txt'
 
-num_v, num_l, v_lengths, series, equipment, l_lengths, departures, schedule_types, blocked = parse(file_path)
+num_vehicles, num_lanes, vehicle_lengths, series, equipment, lane_lengths, departures, schedule_types, blocked = parse(file_path)
 
 #############read the file ########################
-
-
-def transform_to_int(elem):
-    if elem == '\n': #converting string elements to int
-        return 0
-    else:
-        return int(elem)
-
-
 def read_into_solution_list(paramList):
-    for i in range(29):
-        inp = f.readline()
-        x = inp.split(' ') if inp[-1] != ' ' else inp[:-1].split(' ')
-
-        newx = [] #creating empty lists in order to fill them with converted to int values from each row (lane)
-        for j in x:
-            tr = transform_to_int(j)
-            if tr != 0:
-                newx.append(tr)
-
-        paramList.append(newx) #appending the lane inputs to the array of lanes
-
-    return paramList
-
+    with open(path) as f:
+        return [list(map(int, line.split(' ')[:-1])) for line in f.read().splitlines()]
 
 ####################check the constraints##################
 def allKillConstraintCheck(InitialList):
@@ -82,8 +61,8 @@ def lengthConstraint (CombLi):
         lengthLi = []
         if len(li)!=0:
             for i in li:
-                lengthLi.append(v_lengths[i-1])
-        if (sum(lengthLi)+0.5*(len(li)-1)) > l_lengths[CombLi.index(li)-1]:
+                lengthLi.append(vehicle_lengths[i-1])
+        if (sum(lengthLi)+0.5*(len(li)-1)) > lane_lengths[CombLi.index(li)-1]:
             liSat = False
         countSat = countSat == liSat
     return sat==countSat
@@ -108,9 +87,8 @@ def blockLanesRightChecker(CombLi): #main blocked lanes checker
         iSat = True
         blockedLanes = blocked[i]
         blcs = True  # blcs = blocking lanes constraint satisfaction
-        if len(blockedLanes) != 0: #if there are some blockedLanes, we send each of them to find out whether the time of the blocking lane is smaller than of the one that is blocked
-            for jindex in blockedLanes:
-                blcs = (blcs == isAheadOfBlockedLane(InitSol[i], InitSol[jindex - 1]))
+        for jindex in blockedLanes:
+            blcs = (blcs == isAheadOfBlockedLane(CombLi[i], CombLi[jindex - 1]))
         iSat= iSat == blcs
     return sat == iSat
 
@@ -163,15 +141,15 @@ def fitness_function3(CombLi):
     for li in CombLi:
 
         if len(li) == 0:
-            remainCapacity += l_lengths[CombLi.index(li)]
+            remainCapacity += lane_lengths[CombLi.index(li)]
         else:
-            vhs = l_lengths[CombLi.index(li)] #vhs = sum of all lengths of vehicles on a lane
+            vhs = lane_lengths[CombLi.index(li)] #vhs = sum of all lengths of vehicles on a lane
             for i in li:
-                vhs -= v_lengths[i-1]
+                vhs -= vehicle_lengths[i-1]
 
             remainCapacity += vhs - 0.5*(len(li) - 1)
 
-    return remainCapacity/(sum(l_lengths) - sum(v_lengths))
+    return remainCapacity/(sum(lane_lengths) - sum(vehicle_lengths))
 
 
 def obj_1(CombLi):
@@ -248,8 +226,7 @@ def simulatedAnnealing(inputList):
 #***************************MAIN BODY**************************************
 #**************************************************************************
 
-InitSol = []
-f = open("instances/instance1.txt_solution_num_p_3.txt", "r")
-read_into_solution_list(InitSol)
+path = "instances/instance1.txt_solution_num_p_3.txt"
+init_sol = read_into_solution_list(path)
 #**********************HEURISTICS************************
-print(simulatedAnnealing(InitSol))
+print(simulatedAnnealing(init_sol))
