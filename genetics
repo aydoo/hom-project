@@ -114,6 +114,7 @@ def allKillConstraintCheck(InitialList):
     allKillSat.append(int(True == canBePlacedOnTheLane(InitialList)))
     return sum(allKillSat) == 4
 
+
 #1. if the vehicle can be placed on the lane
 def canBePlacedOnTheLane(combLi):
     liSat = 1
@@ -141,6 +142,8 @@ def sameSeriesConstraint (CombLi):
                         iSat = False
         liSat = liSat == iSat
     return sat == liSat
+
+
 
 #3. length doesn't exceed
 def lengthConstraint (CombLi):
@@ -259,36 +262,68 @@ def fitness_function3(CombLi):
 
 def calculate_fitness(CombLi):
     return fitness_function1(CombLi)+fitness_function2(CombLi)+fitness_function3(CombLi)
-###############################################################
+
+
+def insertRandomVehicle(combLi):  # moveV = number of vehicle to be moved, moveToL = number of lane where we put our vehicle
+    # for li in combLi:
+    #     try:
+    #         indexOfVehicle = combLi.index(moveV)
+    #         indexOfLane = combLi.index(li)
+    #     except ValueError:
+    #         continue
+    moveVehicle = randint(1, 10)  # a random vehicle that is gonna be taken out of a lane and put on another lane
+    moveToLane = randint(0, len(combLi))  # a random lane where we will put our vehicle
+    print(moveVehicle)
+    print(moveToLane)
+    for li in combLi:
+        if moveVehicle in li:
+            indexOfLane = combLi.index(li)
+    combLi[indexOfLane].remove(moveVehicle)
+
+    while len(combLi[moveToLane]) == 3:
+        moveToLane = randint(0, len(combLi))
+        print(moveToLane)
+
+    combLi[moveToLane].append(moveVehicle)
+
+    return combLi
+
+#**************************************************************************
+#***************************MAIN BODY**************************************
+#**************************************************************************
+
 InitSol = []
 f = open("instances/instance1.txt_solution_num_p_3.txt", "r")
 read_into_solution_list(InitSol)
-##########################CHECKING THE BLOCKING LANES CONSTRAINT########################3333
-#finding the lanes that it's blocking on example of some lane with index i
 
 #***************APPLYING HEURISTICS***************************
 print(allKillConstraintCheck(InitSol))
 print(calculate_fitness(InitSol))
-
 ######### Go algorithm ##################3
 
-successfulRecombination = False
-attempt = 1
-newSol = InitSol
+# successfulRecombination = False
+# attempt = 1
+# newSol = InitSol
+#
+# while successfulRecombination != True:
+#     print("Attempt " + str(attempt))
+#     lane1 = randint(0, 28)
+#     lane2 = randint(0, 28)
+#     print(str(lane1) + " " + str(lane2))
+#     newSol[lane1], newSol[lane2] = newSol[lane2], newSol[lane1]
+#     successfulRecombination = allKillConstraintCheck(newSol)
+#     attempt += 1
+#
+# print(newSol)
+# out = open("instances/newrandalg.txt", "a")
+# out.write("\n***********Array***************\n")
+# out.write(str(newSol))
+# out.write(str(calculate_fitness(newSol)))
+# print(calculate_fitness(newSol))
+# #how I want it to work:
+#
+# #1. Move random vehicle to random lane
 
-while successfulRecombination != True:
-    print("Attempt " + str(attempt))
-    lane1 = randint(0, 28)
-    lane2 = randint(0, 28)
-    print(str(lane1) + " " + str(lane2))
-    newSol[lane1], newSol[lane2] = newSol[lane2], newSol[lane1]
-    successfulRecombination = allKillConstraintCheck(newSol)
-    attempt += 1
+#Kinda simulated annealing
 
-print(newSol)
-out = open("instances/newrandalg.txt", "a")
-out.write("\n***********Array***************\n")
-out.write(str(newSol))
-out.write(str(calculate_fitness(newSol)))
-print(calculate_fitness(newSol))
 
