@@ -1,3 +1,4 @@
+import math
 from random import *
 
 vehicleLenghtsList = [42, 42, 42, 53, 53, 42, 53, 53, 53, 42, 53,
@@ -288,6 +289,49 @@ def insertRandomVehicle(combLi):  # moveV = number of vehicle to be moved, moveT
 
     return combLi
 
+
+#**************************SIMULATED ANNEALING ************************
+#**********************************************************************
+
+def simulatedAnnealing(inputList):
+
+    currentSollution = inputList
+    print("Initial set\n: All constraints are satisfied: " + str(allKillConstraintCheck(inputList)))
+    oldFitness = calculate_fitness(currentSollution)
+    print("\nThe fitness function = " + str(oldFitness))
+
+    T = 50 #T = temperature
+    coolrate = 0.08 #cooling rate
+
+    #main loop with temperature decreasing
+    while (T >= 5):
+
+        attemptsList = [] #it is a list of attempts to generate new set of lanes for each simulated annealing cycle
+        combinationTry = 1
+
+        newSolution = insertRandomVehicle(currentSollution)
+        #loop with creating a new random solution that satisfies the constraints
+        while (allKillConstraintCheck(newSolution) != True):
+            newSolution = insertRandomVehicle(currentSollution) #generating the new set of lanes with vehicles
+            combinationTry += 1 #i just want to know how much tries it takes to generate a new list
+
+        attemptsList.append(combinationTry)
+
+        newFitness = calculate_fitness(newSolution)
+
+        delta = newFitness - oldFitness
+        if delta < 0:
+            currentSollution = newSolution
+        else:
+            selectProbability = 1/(1 + math.e ** (delta/T)) #calculating the probability of changing the solution
+            z = random()
+            if z < selectProbability:
+                currentSollution = newSolution
+
+        T = T * (1 - coolrate) #changing the temperature
+
+    print("The solution was changed " + str(len(attemptsList)))
+    return currentSollution
 #**************************************************************************
 #***************************MAIN BODY**************************************
 #**************************************************************************
@@ -297,9 +341,10 @@ f = open("instances/instance1.txt_solution_num_p_3.txt", "r")
 read_into_solution_list(InitSol)
 
 #***************APPLYING HEURISTICS***************************
-print(allKillConstraintCheck(InitSol))
-print(calculate_fitness(InitSol))
-######### Go algorithm ##################3
+
+print(simulatedAnnealing(InitSol))
+
+######### Old algorithm ##################
 
 # successfulRecombination = False
 # attempt = 1
@@ -320,10 +365,3 @@ print(calculate_fitness(InitSol))
 # out.write(str(newSol))
 # out.write(str(calculate_fitness(newSol)))
 # print(calculate_fitness(newSol))
-# #how I want it to work:
-#
-# #1. Move random vehicle to random lane
-
-#Kinda simulated annealing
-
-
