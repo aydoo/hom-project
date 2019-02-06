@@ -186,17 +186,17 @@ def insertRandomVehicle(combLi):  # moveV = number of vehicle to be moved, moveT
     #     except ValueError:
     #         continue
     moveVehicle = randint(1, 10)  # a random vehicle that is gonna be taken out of a lane and put on another lane
-    moveToLane = randint(0, len(combLi))  # a random lane where we will put our vehicle
-    print(f"moveVehicle: {moveVehicle}")
-    print(f"moveToLane: {moveToLane}")
+    moveToLane = randint(0, len(combLi)-1)  # a random lane where we will put our vehicle
+    print("moving a random vehicle No" + str(moveVehicle))
+    print("moving to a random lane No" + str(moveToLane+1))
     for li in combLi:
         if moveVehicle in li:
             indexOfLane = combLi.index(li)
     combLi[indexOfLane].remove(moveVehicle)
 
     while len(combLi[moveToLane]) == 3:
-        moveToLane = randint(0, len(combLi))
-        print(moveToLane)
+        moveToLane = randint(0, len(combLi)-1)
+        print("new random lane = " + str(moveToLane))
 
     combLi[moveToLane].append(moveVehicle)
 
@@ -209,9 +209,9 @@ def insertRandomVehicle(combLi):  # moveV = number of vehicle to be moved, moveT
 def simulatedAnnealing(inputList):
 
     currentSollution = inputList
-    print("Initial set\n: All constraints are satisfied: " + str(allKillConstraintCheck(inputList)))
+    print("Initial set:\n All constraints are satisfied: " + str(allKillConstraintCheck(inputList)))
     oldFitness = calculate_fitness(currentSollution)
-    print("\nThe fitness function = " + str(oldFitness))
+    print("The fitness function = " + str(oldFitness))
 
     T = 50 #T = temperature
     coolrate = 0.08 #cooling rate
@@ -252,12 +252,11 @@ def simulatedAnnealing(inputList):
 InitSol = []
 f = open("instances/instance1.txt_solution_num_p_3.txt", "r")
 read_into_solution_list(InitSol)
+print(simulatedAnnealing(InitSol))
 
 #***************APPLYING HEURISTICS***************************
 
-print(simulatedAnnealing(InitSol))
-
-######### Old algorithm ##################
+######### Old algorithm ##################3
 
 # successfulRecombination = False
 # attempt = 1
