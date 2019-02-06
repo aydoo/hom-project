@@ -19,69 +19,62 @@ def allKillConstraintCheck(InitialList):
 
 
 #1. if the vehicle can be placed on the lane
-def canBePlacedOnTheLane(combLi):
-    liSat = 1
-    for li in range(len(combLi)):
-        iSat = 1
-        if len(combLi[li]) != 0:
-            for i in combLi[li]:
-                iSat * int(1 == equipment[i-1][li])
+def canBePlacedOnTheLane(sol):
+    for l in range(num_lanes):
+        if len(sol[l]) != 0:
+            for v in sol[l]:
+                if equipment[v-1][l] == 0:
+                    return False
 
-        liSat *= iSat
-    return liSat == 1
+    return True
 
 
 
 #2. same series in one lane
-def sameSeriesConstraint (CombLi):
-    sat = True
-    liSat = True
-    for li in CombLi:
-        iSat = True
-        if len(li) > 1:
-            for i in range(len(li)-1):
-                if series[li[i]-1] != series[li[i+1]-1]:
-                    iSat = False
-        liSat = liSat == iSat
-    return sat == liSat
-
-
+def sameSeriesConstraint (sol):
+    for l in range(num_lanes):
+        if len(sol[l]) != 0:
+            for v_1 in sol[l]:
+                for v_2 in sol[l]:
+                    if series[v_1-1] != series[v_2-1]:
+                        return False
+    return True
 
 #3. length doesn't exceed
-def lengthConstraint (CombLi):
+def lengthConstraint (sol):
     sat = True
     countSat = True
-    for li in CombLi:
+    for li in sol:
         liSat = True
         lengthLi = []
         if len(li)!=0:
             for i in li:
                 lengthLi.append(vehicle_lengths[i-1])
-        if (sum(lengthLi)+0.5*(len(li)-1)) > lane_lengths[CombLi.index(li)-1]:
+        if (sum(lengthLi)+0.5*(len(li)-1)) > lane_lengths[sol.index(li)-1]:
             liSat = False
         countSat = countSat == liSat
     return sat==countSat
 
 
 #4. sort by departure time
-def departureTimeConstraint(CombLi):
-    for li in CombLi:
+def departureTimeConstraint(sol):
+    for li in sol:
         depLi = []
         if len(li)>1:
             for i in li:
                 depLi.append(departures[i-1])
         sortedByDepartureTime = sorted(zip(li, depLi), key=lambda tup: tup[1])
         li = [i[0] for i in sortedByDepartureTime]
-    return CombLi
+    return sol
 
 
 #5. blocking lane departures
-def blockLanesRightChecker(CombLi): #main blocked lanes checker
+def blockLanesRightChecker(sol): #main blocked lanes checker
     for blocking_lane in blocked:
         blocked_lanes = blocked[blocking_lane]
         for blocked_lane in blocked_lanes:
-            lane_i = CombLi[blocking_lane-1]
-            lane_j = CombLi[blocked_lane-1]
+            lane_i = sol[blocking_lane-1]
+            lane_j = sol[blocked_lane-1]
             for i in lane_i:
                 for j in lane_j:
                     if departures[i-1] >= departures[j-1]:
@@ -103,14 +96,14 @@ def isAheadOfBlockedLane(li1, li2): #help function
 #FITNESS FUNCTIONs
 
 # AYDIN PLEASE LOOK INTO fitness_function1, IT WORKS WRONG, I checked it and it seemed right but apparently it's not
-def fitness_function1(CombLi): #CombLi = list of lists i.e each sublist is a lane with vehicles on it, if a sublist is empty - no vehicle on a lane
+def fitness_function1(sol): #sol = list of lists i.e each sublist is a lane with vehicles on it, if a sublist is empty - no vehicle on a lane
     f1 = 0
-    if len(CombLi[0]) != 0:
-        SeriesNum = CombLi[0][0]
+    if len(sol[0]) != 0:
+        SeriesNum = sol[0][0]
     else:
         SeriesNum = 0
 
-    for li in CombLi:
+    for li in sol:
         if len(li) != 0:
             if SeriesNum != series[li[0]-1]:
                 f1 += 1
@@ -119,27 +112,27 @@ def fitness_function1(CombLi): #CombLi = list of lists i.e each sublist is a lan
             if SeriesNum != 0:
                 f1 += 1
                 SeriesNum = 0
-    return f1 /(len(CombLi)-1)
+    return f1 /(len(sol)-1)
 
 
-def fitness_function2(CombLi):
+def fitness_function2(sol):
     f2 = 0
-    for li in CombLi:
+    for li in sol:
         if len(li) != 0:
             f2 += 1
-    return f2/len(CombLi)
+    return f2/len(sol)
 
 
 #AND ALSO LOOK INTO fitness function 3
-def fitness_function3(CombLi):
+def fitness_function3(sol):
     remainCapacity = 0
 
-    for li in CombLi:
+    for li in sol:
 
         if len(li) == 0:
-            remainCapacity += lane_lengths[CombLi.index(li)]
+            remainCapacity += lane_lengths[sol.index(li)]
         else:
-            vhs = lane_lengths[CombLi.index(li)] #vhs = sum of all lengths of vehicles on a lane
+            vhs = lane_lengths[sol.index(li)] #vhs = sum of all lengths of vehicles on a lane
             for i in li:
                 vhs -= vehicle_lengths[i-1]
 
@@ -148,43 +141,43 @@ def fitness_function3(CombLi):
     return remainCapacity/(sum(lane_lengths) - sum(vehicle_lengths))
 
 
-def obj_1(CombLi):
-    return fitness_function1(CombLi)+fitness_function2(CombLi)+fitness_function3(CombLi)
+def obj_1(sol):
+    return fitness_function1(sol)+fitness_function2(sol)+fitness_function3(sol)
 
 
-def insertRandomVehicle(combLi):  # moveV = number of vehicle to be moved, moveToL = number of lane where we put our vehicle
-    # for li in combLi:
+def insertRandomVehicle(sol):  # moveV = number of vehicle to be moved, moveToL = number of lane where we put our vehicle
+    # for li in sol:
     #     try:
-    #         indexOfVehicle = combLi.index(moveV)
-    #         indexOfLane = combLi.index(li)
+    #         indexOfVehicle = sol.index(moveV)
+    #         indexOfLane = sol.index(li)
     #     except ValueError:
     #         continue
 
     moveVehicle = randint(1, 10)  # a random vehicle that is gonna be taken out of a lane and put on another lane
-    moveToLane = randint(0, len(combLi)-1)  # a random lane where we will put our vehicle
+    moveToLane = randint(0, len(sol)-1)  # a random lane where we will put our vehicle
 #    print("moving a random vehicle No" + str(moveVehicle))
 #    print("moving to a random lane No" + str(moveToLane+1))
-    for li in combLi:
+    for li in sol:
         if moveVehicle in li:
-            indexOfLane = combLi.index(li)
-    combLi[indexOfLane].remove(moveVehicle)
+            indexOfLane = sol.index(li)
+    sol[indexOfLane].remove(moveVehicle)
 
-    while len(combLi[moveToLane]) == 3:
-        moveToLane = randint(0, len(combLi)-1)
+    while len(sol[moveToLane]) == 3:
+        moveToLane = randint(0, len(sol)-1)
        # print("new random lane = " + str(moveToLane))
 
-    combLi[moveToLane].append(moveVehicle)
+    sol[moveToLane].append(moveVehicle)
 
-    return combLi
+    return sol
 
 
 #**************************SIMULATED ANNEALING ************************
 #**********************************************************************
 
-def simulatedAnnealing(inputList):
+def simulatedAnnealing(sol):
 
-    cur_sol = inputList
-    print("Initial set:\n All constraints are satisfied: " + str(allKillConstraintCheck(inputList)))
+    cur_sol = sol
+    print("Initial set:\n All constraints are satisfied: " + str(allKillConstraintCheck(sol)))
     original_fitness = obj_1(cur_sol)
     oldFitness = original_fitness
     print("The fitness function = " + str(oldFitness))
@@ -233,7 +226,7 @@ num_vehicles, num_lanes, vehicle_lengths, series, equipment, lane_lengths, depar
 sol_path = 'instances/instance3.txt_solution_num_p_3.txt'
 
 init_sol = read_into_solution_list(sol_path)
-improved_sol = simulatedAnnealing(init_sol)
+improved_sol = simulatedAnnealing(init_sol.copy())
 
 #Write to file
 improved_sol_path = sol_path + "_improved.txt"
