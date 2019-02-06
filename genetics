@@ -1,6 +1,4 @@
-import numpy as np
-from pulp import *
-import time
+from random import *
 
 vehicleLenghtsList = [42, 42, 42, 53, 53, 42, 53, 53, 53, 42, 53,
                53, 53, 42, 53, 53, 53, 42, 53, 42, 42, 53,
@@ -248,17 +246,35 @@ def fitness_function3(CombLi):
 
 def calculate_fitness(CombLi):
     return fitness_function1(CombLi)+fitness_function2(CombLi)+fitness_function3(CombLi)
-    
-    
 ###############################################################
-
 InitSol = []
 f = open("instances/instance1.txt_solution_num_p_3.txt", "r")
 read_into_solution_list(InitSol)
+##########################CHECKING THE BLOCKING LANES CONSTRAINT########################3333
+#finding the lanes that it's blocking on example of some lane with index i
 
-#***************Checking the constraints and calculating the fitness function (f1p1+f2p2+f3p3)
-
+#***************APPLYING HEURISTICS***************************
 print(allKillConstraintCheck(InitSol))
 print(calculate_fitness(InitSol))
 
+######### Go algorithm ##################3
 
+successfulRecombination = False
+attempt = 1
+newSol = InitSol
+
+while successfulRecombination != True:
+    lane1 = randint(0, 28)
+    lane2 = randint(0, 28)
+    print(str(lane1) + " " + str(lane2))
+    newSol[lane1], newSol[lane2] = newSol[lane2], newSol[lane1]
+    successfulRecombination = allKillConstraintCheck(newSol)
+    attempt += 1
+    print("Attempt " + str(attempt))
+
+print(newSol)
+out = open("instances/newrandalg.txt", "a")
+out.write("\n***********Array***************\n")
+out.write(str(newSol))
+out.write(str(calculate_fitness(newSol)))
+print(calculate_fitness(newSol))
