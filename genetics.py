@@ -49,11 +49,19 @@ def lengthConstraint (sol):
 
 #4. sort by departure time
 def departureTimeConstraint(sol):
+    sol_orig = sol
+    sol = sol.copy()
     for l in range(num_lanes):
         if len(sol[l]) != 0:
-            for v_index in range(len(sol[l])-1):
-                if departures[sol[l][v_index]-1] > departures[sol[l][v_index+1]-1]:
-                    return False
+            cur_list = sol[l].copy()
+            by_departures = [departures[i-1] for i in cur_list]
+            new_list = []
+            for i in range(len(cur_list)):
+                index_of_largest = by_departures.index(max(by_departures))
+                by_departures.remove(max(by_departures))
+                new_list.append(cur_list[index_of_largest])
+                del cur_list[index_of_largest]
+            sol[l] = new_list
     return True
 
 
@@ -106,7 +114,7 @@ def obj_1(sol):
     return fitness_function1(sol)+fitness_function2(sol)+fitness_function3(sol)
 
 
-def insertRandomVehicle(sol):  # moveV = number of vehicle to be moved, moveToL = number of lane where we put our vehicle
+def move_random_vehicle(sol):  # moveV = number of vehicle to be moved, moveToL = number of lane where we put our vehicle
     # for li in sol:
     #     try:
     #         indexOfVehicle = sol.index(moveV)
@@ -114,7 +122,7 @@ def insertRandomVehicle(sol):  # moveV = number of vehicle to be moved, moveToL 
     #     except ValueError:
     #         continue
 
-    moveVehicle = randint(1, 10)  # a random vehicle that is gonna be taken out of a lane and put on another lane
+    moveVehicle = randint(1, num_vehicles)  # a random vehicle that is gonna be taken out of a lane and put on another lane
     moveToLane = randint(0, len(sol)-1)  # a random lane where we will put our vehicle
 #    print("moving a random vehicle No" + str(moveVehicle))
 #    print("moving to a random lane No" + str(moveToLane+1))
@@ -131,13 +139,37 @@ def insertRandomVehicle(sol):  # moveV = number of vehicle to be moved, moveToL 
 
     return sol
 
+def move_random_vehicle_feasbile(sol, num_moves):
+    sol = sol.copy()
+    for i in range(num_moves):
+        lane
+        cur_v = randint(1, num_vehicles)
+        cur_series = series[cur_v-1]
+        cur_length = vehicle_lengths[cur_v-1]
+
+        # find lanes that suit the series
+        lanes_series = [i for i,l in enumerate(sol) if l == [] or series[l[0]-1] == cur_series]
+
+        # find lanes that have space
+        lanes = []
+        for i in lane_series:
+            if len(sol[i]) != 0:
+                total_length = sum([vehicle_lengths[v-1] for v in sol[i]])+ (len(sol[i])-1)*0.5
+                if total_length+cur_length <= lane_lengths[i]:
+                    lanes.add(i)
+            else:
+                lanes.append(i)
+        
+        # move it
+
+
 
 #**************************SIMULATED ANNEALING ************************
 #**********************************************************************
 
 def simulatedAnnealing(sol):
     cur_sol = sol
-    print("Initial set:\n All constraints are satisfied: " + str(check_constraints(sol)))
+    print("Initial set:\nAll constraints are satisfied: " + str(check_constraints(sol)))
     original_fitness = obj_1(cur_sol)
     oldFitness = original_fitness
     print("The fitness function = " + str(oldFitness))
@@ -152,10 +184,10 @@ def simulatedAnnealing(sol):
     while (T > 0.01):
         combinationTry = 1
         oldFitness = obj_1(cur_sol)
-        newSolution = insertRandomVehicle(cur_sol)
+        newSolution = move_random_vehicle(cur_sol)
         #loop with creating a new random solution that satisfies the constraints
         while (check_constraints(newSolution) != True):
-            newSolution = insertRandomVehicle(cur_sol) #generating the new set of lanes with vehicles
+            newSolution = move_random_vehicle(cur_sol) #generating the new set of lanes with vehicles
             combinationTry += 1 #i just want to know how much tries it takes to generate a new list
 
         attemptsList.append(combinationTry)
@@ -167,13 +199,14 @@ def simulatedAnnealing(sol):
             cur_sol = newSolution
             print(f"Taking improving solution with fitness: {newFitness}")
         else:
-            selectProbability =  math.e ** (-delta/T) #calculating the probability of changing the solution
+            selectProbability = math.e ** (-delta/T) #calculating the probability of changing the solution
             z = random()
             if z < selectProbability:
                 print(f"Taking non-improving solution with fitness: {newFitness}")
                 cur_sol = newSolution
+        print(newSolution)
 
-        sol_tracker.append(newSolution)
+        save_sol(newSolution)
         T = T * (1 - coolrate) #changing the temperature
 
     print("Final solution fitness: " + str(obj_1(cur_sol)) + f" (original: {original_fitness})")
@@ -181,6 +214,14 @@ def simulatedAnnealing(sol):
 #**************************************************************************
 #***************************MAIN BODY**************************************
 #**************************************************************************
+def save_sol(sol):
+    with open(sol_path + "_improved_"+str(obj_1(sol))+".txt" , 'w') as f:
+        for lane in cur_sol:
+            if len(lane) > 0:
+                for v in lane:
+                    f.write(str(v) + " ")
+            f.write('\n')
+    print('Saved solution matrix.')
 
 file_path = 'instances/instance3.txt'
 
@@ -192,12 +233,3 @@ init_sol = read_into_solution_list(sol_path)
 improved_sol, sol_list = simulatedAnnealing(init_sol.copy())
 
 #Write to file
-for cur_sol in sol_list:
-    with open(sol_path + "_improved_"+str(obj_1(cur_sol))+".txt" , 'w') as f:
-        for lane in cur_sol:
-            if len(lane) > 0:
-                for v in lane:
-                    f.write(str(v) + " ")
-            f.write('\n')
-    print('Saved solution matrix.')
-

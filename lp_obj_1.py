@@ -3,7 +3,7 @@ from pulp import *
 from parser import parse
 import time
 
-file_path = 'instances/instance3.txt'
+file_path = 'instances/instance1.txt'
 
 num_v, num_l, v_lengths, series, equipment, l_lengths, departures, schedule_types, blocked = parse(file_path)
 
@@ -24,10 +24,10 @@ Y = {(l,s): LpVariable(f'y_{l}_{s}', cat='Binary') for l in range(num_l)
 #Z = {l: LpVariable(f'z_{l}', cat='Binary') for l in range(num_l)}
 
 # Indicates how much capacity is left in lane l
-C = {l: LpVariable(f'c_{l}', cat='Continuous') for l in range(num_l)}
+#C = {l: LpVariable(f'c_{l}', cat='Continuous') for l in range(num_l)}
 
 # Indicates whether lane l and l+1 have the same schedule type (Note: 0 means YES, 1 means NO')
-S = {l: LpVariable(f's_{l}', cat='Binary') for l in range(num_l-1)}
+#S = {l: LpVariable(f's_{l}', cat='Binary') for l in range(num_l-1)}
 
 # 1. A vehicle is assigned to exactly one lane.
 for v in range(num_v):
@@ -51,8 +51,8 @@ for v in range(num_v):
 for l in range(num_l):
     prob += lpSum([X[(v,l,p)] * (v_lengths[v] + 0.5)
                              for v in range(num_v)
-                             for p in range(num_p)]) - 0.5 + C[l] == l_lengths[l]
-    prob += C[l] >= 0
+                             for p in range(num_p)]) - 0.5 <= l_lengths[l]
+    #prob += C[l] >= 0
 # 5. A vehicle is assigned to exactly one position (number of a vehicle in a lane).
 # Implied by 1
 
@@ -84,10 +84,10 @@ for l in range(num_l):
 # Note that Constraint 4. has also been modified for obj 1
 
 
-for l in range(num_l-1):
-    prob += lpSum([X[(v,l,0)]-X[(v,l+1,0)] for v in range(num_v)]) <= S[l]*1000 #TODO: pick better big M
-    prob += lpSum([X[(v,l,0)]-X[(v,l+1,0)] for v in range(num_v)]) >= S[l]*1000*(-1) #TODO: pick better big M
-
+#for l in range(num_l-1):
+#    prob += lpSum(([X[(v,l,0)]-X[(v,l+1,0)])*series[v] for v in range(num_v)]) <= S[l]*1000 #TODO: pick better big M
+#    prob += lpSum(([X[(v,l,0)]-X[(v,l+1,0)])*seroes[v] for v in range(num_v)]) >= S[l]*1000*(-1) #TODO: pick better big M
+#
 
 print(f"Num Variables: {len(prob.variables())}")
 print(f"Num Constraints: {len(prob.constraints)}")
@@ -98,18 +98,18 @@ p_2 = 1 / num_l
 p_3 = 1 / (sum(l_lengths) - sum(v_lengths))
 
 # Min function
-f_1 = lpSum([S[l] for l in range(num_l - 1)])
+#f_1 = lpSum([S[l] for l in range(num_l - 1)])
 f_2 = lpSum([Y[(l,s)] for l in range(num_l)
                       for s in np.unique(series)])
-f_3 = lpSum([C[l] for l in range(num_l)])
-
-for l in range(num_l):
-    f_3 += (1-lpSum([Y[(l,s)] for l in range(num_l)
-                           for s in np.unique(series)])) * -(l_lengths[l] + 0.5)
-prob += p_1 * f_1 + p_2 * f_2 + p_3 * f_3
+#f_3 = lpSum([C[l] for l in range(num_l)])
+#
+#for l in range(num_l):
+#    f_3 += (1-lpSum([Y[(l,s)] for l in range(num_l)
+#                           for s in np.unique(series)])) * -(l_lengths[l] + 0.5)
+prob += p_2 * f_2
 #prob += p_1 * f_1 + p_2 * f_2 
 
-#prob.writeLP("Scheduling2.lp")
+prob.writeLP("Scheduling2.lp")
 start_time = time.time()
 print('Solving...')
 LpSolverDefault.msg = 1
@@ -118,7 +118,7 @@ prob.solve()
 print("------")
 print("Status:", LpStatus[prob.status])
 print(f"Elapsed time: {round(time.time()-start_time, 2)}")
-print("Minimized value =", value(prob.objective))
+#print("Minimized value =", value(prob.objective))
 
 
 # Construct solution matrix
@@ -130,7 +130,7 @@ for l in range(num_l):
             pos = values.index(max(values))+1
             result_matrix[l,p] = pos
 
-with open(file_path + f'_solution_obj_1_full_num_p_{num_p}.txt', 'w') as f:
+with open(file_path + f'_1min_sol.txt', 'w') as f:
     for l in range(num_l):
         for p in range(num_p):
             f.write(f'{str(result_matrix[l,p]) + " " if result_matrix[l,p] is not None else ""}')
