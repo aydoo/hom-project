@@ -8,14 +8,12 @@ def read_into_solution_list(path):
         return [list(map(int, line.split(' ')[:-1])) for line in f.read().splitlines()]
 
 ####################check the constraints##################
-def allKillConstraintCheck(InitialList):
-    InitialList = departureTimeConstraint(InitialList)
-    allKillSat = []
-    allKillSat.append(int(True == sameSeriesConstraint(InitialList)))
-    allKillSat.append(int(True == lengthConstraint(InitialList)))
-    allKillSat.append(int(True == blockLanesRightChecker(InitialList)))
-    allKillSat.append(int(True == canBePlacedOnTheLane(InitialList)))
-    return sum(allKillSat) == 4
+def check_constraints(sol):
+    return departureTimeConstraint(sol) and \
+           sameSeriesConstraint(sol) and \
+           lengthConstraint(sol) and \
+           blockLanesRightChecker(sol) and \
+           canBePlacedOnTheLane(sol)
 
 
 #1. if the vehicle can be placed on the lane
@@ -25,7 +23,6 @@ def canBePlacedOnTheLane(sol):
             for v in sol[l]:
                 if equipment[v-1][l] == 0:
                     return False
-
     return True
 
 
@@ -42,30 +39,22 @@ def sameSeriesConstraint (sol):
 
 #3. length doesn't exceed
 def lengthConstraint (sol):
-    sat = True
-    countSat = True
-    for li in sol:
-        liSat = True
-        lengthLi = []
-        if len(li)!=0:
-            for i in li:
-                lengthLi.append(vehicle_lengths[i-1])
-        if (sum(lengthLi)+0.5*(len(li)-1)) > lane_lengths[sol.index(li)-1]:
-            liSat = False
-        countSat = countSat == liSat
-    return sat==countSat
+    for l in range(num_lanes):
+        if len(sol[l]) != 0:
+            total_length = sum([vehicle_lengths[v-1] for v in sol[l]])+ (len(sol[l])-1)*0.5
+            if total_length > lane_lengths[l]:
+                return False
+    return True
 
 
 #4. sort by departure time
 def departureTimeConstraint(sol):
-    for li in sol:
-        depLi = []
-        if len(li)>1:
-            for i in li:
-                depLi.append(departures[i-1])
-        sortedByDepartureTime = sorted(zip(li, depLi), key=lambda tup: tup[1])
-        li = [i[0] for i in sortedByDepartureTime]
-    return sol
+    for l in range(num_lanes):
+        if len(sol[l]) != 0:
+            for v_index in range(len(sol[l])-1):
+                if departures[sol[l][v_index]-1] > departures[sol[l][v_index+1]-1]:
+                    return False
+    return True
 
 
 #5. blocking lane departures
@@ -81,39 +70,20 @@ def blockLanesRightChecker(sol): #main blocked lanes checker
                         return False
     return True
 
-def isAheadOfBlockedLane(li1, li2): #help function
-    sat = True
-    if len(li1) != 0:
-        if len(li2) != 0:
-            if departures[li1[-1]-1] < departures[li2[0]-1]:
-                sat = True
-            else:
-                sat = False
-
-    return sat
-
-
 #FITNESS FUNCTIONs
 
 # AYDIN PLEASE LOOK INTO fitness_function1, IT WORKS WRONG, I checked it and it seemed right but apparently it's not
 def fitness_function1(sol): #sol = list of lists i.e each sublist is a lane with vehicles on it, if a sublist is empty - no vehicle on a lane
-    f1 = 0
-    if len(sol[0]) != 0:
-        SeriesNum = sol[0][0]
-    else:
-        SeriesNum = 0
-
-    for li in sol:
-        if len(li) != 0:
-            if SeriesNum != series[li[0]-1]:
-                f1 += 1
-                SeriesNum = series[li[0]-1]
-        else:
-            if SeriesNum != 0:
-                f1 += 1
-                SeriesNum = 0
-    return f1 /(len(sol)-1)
-
+    result = 0
+    l = 0
+    while l < num_lanes:
+        if len(sol[l]) != 0:
+            cur_series = series[sol[l][0]-1]
+            l = l+1
+            while l < num_lanes and (len(sol[l]) == 0 or series[sol[l][0]-1] == cur_series):
+                l = l+1
+            result +=1
+    return result / (num_lanes-1)
 
 def fitness_function2(sol):
     f2 = 0
@@ -125,21 +95,12 @@ def fitness_function2(sol):
 
 #AND ALSO LOOK INTO fitness function 3
 def fitness_function3(sol):
-    remainCapacity = 0
-
-    for li in sol:
-
-        if len(li) == 0:
-            remainCapacity += lane_lengths[sol.index(li)]
-        else:
-            vhs = lane_lengths[sol.index(li)] #vhs = sum of all lengths of vehicles on a lane
-            for i in li:
-                vhs -= vehicle_lengths[i-1]
-
-            remainCapacity += vhs - 0.5*(len(li) - 1)
-
-    return remainCapacity/(sum(lane_lengths) - sum(vehicle_lengths))
-
+    result = 0
+    for l in range(num_lanes):
+        if len(sol[l]) != 0:
+            total_length = sum([vehicle_lengths[v-1] for v in sol[l]])+ (len(sol[l])-1)*0.5
+            result = result +  (lane_lengths[l]-total_length)
+    return result/(sum(lane_lengths) - sum(vehicle_lengths))
 
 def obj_1(sol):
     return fitness_function1(sol)+fitness_function2(sol)+fitness_function3(sol)
@@ -175,12 +136,13 @@ def insertRandomVehicle(sol):  # moveV = number of vehicle to be moved, moveToL 
 #**********************************************************************
 
 def simulatedAnnealing(sol):
-
     cur_sol = sol
-    print("Initial set:\n All constraints are satisfied: " + str(allKillConstraintCheck(sol)))
+    print("Initial set:\n All constraints are satisfied: " + str(check_constraints(sol)))
     original_fitness = obj_1(cur_sol)
     oldFitness = original_fitness
     print("The fitness function = " + str(oldFitness))
+
+    sol_tracker = []
 
     T = 100 #T = temperature
     coolrate = 0.08 #cooling rate
@@ -192,7 +154,7 @@ def simulatedAnnealing(sol):
         oldFitness = obj_1(cur_sol)
         newSolution = insertRandomVehicle(cur_sol)
         #loop with creating a new random solution that satisfies the constraints
-        while (allKillConstraintCheck(newSolution) != True):
+        while (check_constraints(newSolution) != True):
             newSolution = insertRandomVehicle(cur_sol) #generating the new set of lanes with vehicles
             combinationTry += 1 #i just want to know how much tries it takes to generate a new list
 
@@ -205,16 +167,17 @@ def simulatedAnnealing(sol):
             cur_sol = newSolution
             print(f"Taking improving solution with fitness: {newFitness}")
         else:
-            selectProbability = 1/(1 + math.e ** (delta/T)) #calculating the probability of changing the solution
+            selectProbability =  math.e ** (-delta/T) #calculating the probability of changing the solution
             z = random()
             if z < selectProbability:
                 print(f"Taking non-improving solution with fitness: {newFitness}")
                 cur_sol = newSolution
 
+        sol_tracker.append(newSolution)
         T = T * (1 - coolrate) #changing the temperature
 
     print("Final solution fitness: " + str(obj_1(cur_sol)) + f" (original: {original_fitness})")
-    return cur_sol
+    return cur_sol, sol_tracker
 #**************************************************************************
 #***************************MAIN BODY**************************************
 #**************************************************************************
@@ -226,15 +189,15 @@ num_vehicles, num_lanes, vehicle_lengths, series, equipment, lane_lengths, depar
 sol_path = 'instances/instance3.txt_solution_num_p_3.txt'
 
 init_sol = read_into_solution_list(sol_path)
-improved_sol = simulatedAnnealing(init_sol.copy())
+improved_sol, sol_list = simulatedAnnealing(init_sol.copy())
 
 #Write to file
-improved_sol_path = sol_path + "_improved.txt"
-with open(improved_sol_path, 'w') as f:
-    for lane in improved_sol:
-        if len(lane) > 0:
-            for v in lane:
-                f.write(str(v) + " ")
-        f.write('\n')
-print('Saved solution matrix.')
+for cur_sol in sol_list:
+    with open(sol_path + "_improved_"+str(obj_1(cur_sol))+".txt" , 'w') as f:
+        for lane in cur_sol:
+            if len(lane) > 0:
+                for v in lane:
+                    f.write(str(v) + " ")
+            f.write('\n')
+    print('Saved solution matrix.')
 
